@@ -3,6 +3,8 @@ class gameState():
     def __init__(self):
         self.whitetomove=True
         self.movelog=[]
+        self.white_king_location = (7, 4)
+        self.black_king_location = (0, 4)
         self.funcmove={'p':self.getPawnMoves,'r':self.getrockmoves,'q':self.getqueenmoves,'k':self.getkingmoves,'b':self.getbishopmoves,'n':self.getknightmoves}
         self.board=[
 ["br","bb","bn","bq","bk","bn","bb","br"],
@@ -27,7 +29,70 @@ class gameState():
             self.board[movin.endrow][movin.endcol]=movin.picecaptured
             self.whitetomove=not self.whitetomove
     def validmoves(self):
-        return self.getallmoves()
+        allmoves=self.getallmoves()
+        allowedmoves=[]
+        directions1=[(-1,0),(0,-1),(1,0),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
+        directions2=[(1,2),(1,-2),(2,1),(2,-1),(-2,1),(-2,-1),(-1,2),(-1,-2)]
+        if self.whitetomove:
+            king_row=self.white_king_location[0]
+            king_col=self.white_king_location[1]
+            enemy='b'
+            ally='w'
+        else:
+            king_row=self.black_king_location[0]
+            king_col=self.black_king_location[1]
+            enemy='w'
+            ally='b'            
+        for move in allmoves:
+            self.makemove(move)
+            for j in range(len(directions1)):
+                row=king_row
+                col=king_col
+                di=directions1[j]
+                x=0
+                while row>=0 and row<=7 and col>=0 and col<=7:
+                   x+=1
+                   row+=di[0]
+                   col+=di[1]
+                   if (row>=0 and row<=7 and col>=0 and col<=7) and self.board[row][col][0]==ally and self.board[row][col][1]!='k' :
+                       break
+                   elif ((row>=0 and row<=7 and col>=0 and col<=7) and self.board[row][col][0]==enemy):
+                        if((self.board[row][col][1]=='r'and 0<=j<=3)or (self.board[row][col][1]=='q')or(self.board[row][col][1]=='b'and 4<=j<=7)or (self.board[row][col][1]=='p'and 6<=j<=7 and enemy=='white'and x==1)or(self.board[row][col][1]=='p'and 4<=j<=5 and enemy=='black'and x==1)or(self.board[row][col][1]=='k') and x==1):
+                             self.undo_move() 
+                             x=99
+                             break
+            if x!=99:
+                for j in range(len(directions2)):
+                   di=directions2[j]
+                   row=king_row
+                   col=king_col
+                   di=directions2[j]
+                   row+=di[0]
+                   col+=di[1]
+                   if ((row>=0 and row<=7 and col>=0 and col<=7))and self.board[row][col][0]==ally:
+                      break
+                   elif ((row>=0 and row<=7 and col>=0 and col<=7)) and self.board[row][col][0]==enemy and self.board[row][col][1]=='n':
+                       self.undo_move()
+                       x=99
+                       break
+            if x!=99:
+                allowedmoves.append(move)
+                self.undo_move()
+        return allowedmoves
+            
+
+
+                                
+                        
+                        
+
+
+
+
+
+
+
+
     def getallmoves(self):
         move=[]
         for r in range(8):
