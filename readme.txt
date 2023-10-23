@@ -1,0 +1,1 @@
+rewrite the logic of the piece movements in a more efficient way especially the king and the rook
