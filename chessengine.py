@@ -21,12 +21,20 @@ class gameState():
       self.board[movin.startrow][movin.startcol]="??"
       self.board[movin.endrow][movin.endcol]=movin.piecemovec
       self.movelog.append(movin)
+      if self.whitetomove and self.board[movin.endrow][movin.endcol]=='wk':
+          self.white_king_location=(movin.endrow,movin.endcol)
+      elif not self.whitetomove and self.board[movin.endrow][movin.endcol]=='bk':
+          self.black_king_location=(movin.endrow,movin.endcol)
       self.whitetomove=not self.whitetomove
     def undo_move(self):
         if(len(self.movelog)!=0):
             movin=self.movelog.pop()
             self.board[movin.startrow][movin.startcol]=movin.piecemovec
             self.board[movin.endrow][movin.endcol]=movin.picecaptured
+            if movin.piecemovec=='wk':
+                self.white_king_location=(movin.startrow,movin.startcol)
+            elif movin.piecemovec=='bk':
+                self.black_king_location=(movin.startrow,movin.endcol)
             self.whitetomove=not self.whitetomove
     def validmoves(self):
         allmoves=self.getallmoves()
@@ -45,6 +53,12 @@ class gameState():
             ally='b'            
         for move in allmoves:
             self.makemove(move)
+            if not self.whitetomove and self.board[move.endrow][move.endcol]=='wk':
+                king_row=self.white_king_location[0]
+                king_col=self.white_king_location[1]
+            if  self.whitetomove and self.board[move.endrow][move.endcol]=='bk':
+                king_row=self.black_king_location[0]
+                king_col=self.black_king_location[1]
             for j in range(len(directions1)):
                 row=king_row
                 col=king_col
@@ -54,7 +68,7 @@ class gameState():
                    x+=1
                    row+=di[0]
                    col+=di[1]
-                   if (row>=0 and row<=7 and col>=0 and col<=7) and self.board[row][col][0]==ally and self.board[row][col][1]!='k' :
+                   if (row>=0 and row<=7 and col>=0 and col<=7) and self.board[row][col][0]==ally and self.board[row][col][1]!='k':
                        break
                    elif ((row>=0 and row<=7 and col>=0 and col<=7) and self.board[row][col][0]==enemy):
                         if((self.board[row][col][1]=='r'and 0<=j<=3)or (self.board[row][col][1]=='q')or(self.board[row][col][1]=='b'and 4<=j<=7)or (self.board[row][col][1]=='p'and 6<=j<=7 and enemy=='white'and x==1)or(self.board[row][col][1]=='p'and 4<=j<=5 and enemy=='black'and x==1)or(self.board[row][col][1]=='k') and x==1):
