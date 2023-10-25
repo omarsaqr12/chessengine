@@ -1,121 +1,69 @@
-
+#this file will be used to take the input from the user, his moves.
 import pygame as p
 import chessengine
-import sys
-
-WIDTH = HEIGHT = 400
-dimesion = 8
-
-SQUARE_SIZE = HEIGHT // dimesion
-
-MAX_FPS = 15
-    
-IMAGES = {}
-
-
-def loadImages():
-    '''
-    Initialize a global directory of images.
-    This will be called exactly once in the main.
-    '''
-    pieces = ['wp', 'wR', 'wN', 'wB' ,'wK', 'wQ', 'bp', 'bR', 'bN', 'bB', 'bK', 'bQ']
+width=height=400
+dimension=8
+squaredimention=height/dimension #this is why we chose a height and width divsible by 8
+Image={}
+fps=15
+#then we will make our main funciton
+def loadimage():
+    pieces=["wr","wb","wn","wq","wk","wp","bp","br","bb","bn","bq","bk"]
     for piece in pieces:
-        IMAGES[piece] = p.transform.scale(p.image.load("images/" + piece + ".png"), (SQUARE_SIZE,SQUARE_SIZE))
-        
-        
+        Image[piece]=p.transform.scale(p.image.load("images/"+piece+".png"),(squaredimention,squaredimention))# trasnform.scale to resize to a new resolution
+            
+# now we will create the main function which will be used to handle the user input and draw the board and the pieces
 def main():
-    '''
-    The main driver for our code.
-    This will handle user input and updating the graphics.
-    '''
     p.init()
-    screen = p.display.set_mode((WIDTH, HEIGHT))
-    clock = p.time.Clock()
-    screen.fill(p.Color("white"))
-    game_state = chessengine.GameState()
-    valid_moves = game_state.getValidMoves()
-    move_made = False #flag variable for when a move is made
-    
-    loadImages() #do this only once before while loop
-    
-    running = True
-    square_selected = () #no square is selected initially, this will keep track of the last click of the user (tuple(row,col))
-    player_clicks = [] #this will keep track of player clicks (two tuples)
-
+    loadimage()
+    screen=p.display.set_mode((width,height))#Initialize a window or screen for display
+    clock=p.time.Clock() #create an object to help track time
+    running =True
+    seqsq=()
+    movi=[]
+    game=chessengine.gameState()
+    validmove=game.validmoves()
+    calculate=False
     while running:
-        for e in p.event.get():  
-            if e.type == p.QUIT:
-                running = False
-                p.quit()
-                sys.exit()
-            #mouse handler            
-            elif e.type == p.MOUSEBUTTONDOWN:
-                location = p.mouse.get_pos() #(x, y) location of the mouse
-                col = location[0] // SQUARE_SIZE
-                row = location[1] // SQUARE_SIZE
-                if square_selected == (row, col): #user clicked the same square twice
-                    square_selected = () #deselect
-                    player_clicks = [] #clear clicks
+        for e in p.event.get():
+            if e.type==p.QUIT:
+                running=False
+            elif e.type==p.MOUSEBUTTONDOWN:
+                location=p.mouse.get_pos()
+                y=location[0]//squaredimention
+                x=location[1]//squaredimention
+                if seqsq==(x,y):
+                    seqsq=()
+                    movi=[]
                 else:
-                    square_selected = (row, col)
-                    player_clicks.append(square_selected) #append for both 1st and 2nd click
-                if len(player_clicks) == 2: #after 2nd click
-                    move = chessengine.Move(player_clicks[0], player_clicks[1], game_state.board)  
-                    if move in valid_moves:
-                        print(move.getChessNotation())   
-                        game_state.makeMove(move)
-                        move_made = True
-                        square_selected = () #reset user clicks
-                        player_clicks = [] 
+                    seqsq=(x,y)
+                    movi.append(seqsq)
+                if len(movi)==2:
+                    movin=chessengine.moving(movi[0],movi[1],game.board)
+                    if(movin in validmove):
+                        game.makemove(movin)
+                        calculate=True
+                        seqsq=()
+                        movi=[]
                     else:
-                        player_clicks = [square_selected]
-            #key handler
-            elif e.type == p.KEYDOWN:
-                if e.key == p.K_z: #undo when 'z' is pressed
-                    game_state.undoMove()
-                    move_made = True
-                    
-        if move_made:
-            valid_moves = game_state.getValidMoves()
-            move_made = False
-                    
-                            
-        drawGameState(screen, game_state) 
-        clock.tick(MAX_FPS)
-        p.display.flip()
-
-
-def drawGameState(screen, game_state):
-    '''
-    Responsible for all the graphics within current game state.
-    '''
-    drawBoard(screen) #draw squares on the board
-    #add in piece highlighting or move suggestions (later)
-    drawPieces(screen, game_state.board) #draw pieces on top of those squares      
-
-
-def drawBoard(screen):
-    '''
-    Draw the squares on the board.
-    The top left square is always light.
-    '''
-    colors = [p.Color("white"), p.Color("gray")]
-    for row in range(dimesion):
-        for column in range(dimesion):
-            color = colors[((row+column) % 2)]
-            p.draw.rect(screen, color, p.Rect(column*SQUARE_SIZE, row*SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
-    
-
-def drawPieces(screen, board):
-    '''
-    Draw the pieces on the board using the current game_state.board
-    '''
-    for row in range(dimesion):
-        for column in range(dimesion):
-            piece = board[row][column]
-            if piece != "--":
-                screen.blit(IMAGES[piece], p.Rect(column*SQUARE_SIZE, row*SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
-         
-                
-if __name__ == "__main__":
-    main()
+                        movi=[seqsq]
+            elif e.type ==p.KEYDOWN:
+                if e.key==p.K_z:
+                    game.undo_move()
+                    calculate=True
+        if(calculate):
+            validmove=game.validmoves()
+            calculate=False            
+        clock.tick(15)
+        drawboard(game.board,screen)
+        p.display.flip() #Update the full display Surface to the screen, this is why this is put inside a while loop
+        
+def drawboard(board,screen):
+    colro=[p.Color("green"), p.Color("red")]
+    for r in range(dimension):
+        for c in range(dimension):
+            p.draw.rect(screen,colro[(r+c)%2],p.Rect(c*squaredimention,r*squaredimention,squaredimention,squaredimention))
+            piece=board[r][c]
+            if(piece!="??"):
+                screen.blit(Image[piece], p.Rect(c*squaredimention,r*squaredimention,squaredimention,squaredimention))
+main()
