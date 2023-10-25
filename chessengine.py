@@ -255,6 +255,14 @@ class gameState():
 
             
     def getbishopmoves(self,r,c,move):
+        piece_pinned = False
+        pin_direction = ()
+        for i in range(len(self.pins) - 1, -1, -1):
+            if self.pins[i][0] == r and self.pins[i][1] == c:
+                piece_pinned = True
+                pin_direction = (self.pins[i][2], self.pins[i][3])
+                self.pins.remove(self.pins[i])
+                break        
         directions=[(1,1),(1,-1),(-1,1),(-1,-1)]
         enemy='b' if (self.whitetomove and self.board[r][c][0]=='w') else 'w'
         for d in directions:
@@ -264,10 +272,12 @@ class gameState():
                 startrow+=d[0]
                 startcol+=d[1]
                 if startrow>=0 and startrow<=7 and startcol>=0 and startcol<=7:
-                    if self.board[startrow][startcol][0]==enemy:
+                    if self.board[startrow][startcol][0]==enemy and(not piece_pinned or pin_direction == d or pin_direction == (
+                            -d[0], -d[1])):
                         move.append(moving((r,c),(startrow,startcol),self.board)) 
                         break
-                    elif self.board[startrow][startcol][0]=='?':
+                    elif self.board[startrow][startcol][0]=='?' and (not piece_pinned or pin_direction == d or pin_direction == (
+                            -d[0], -d[1])):
                         move.append(moving((r,c),(startrow,startcol),self.board))
                     else: break
 
@@ -315,21 +325,9 @@ class gameState():
                     if c+1<=7 and self.board[r-1][c+1][0]!='b':
                         move.append(moving((r,c),(r-1,c+1),self.board))                
     def getqueenmoves(self,r,c,move):
-        directions=[(1,0),(0,1),(-1,0),(0,-1),(1,1),(1,-1),(-1,1),(-1,-1)]
-        enemy='b' if (self.whitetomove and self.board[r][c][0]=='w') else 'w'
-        for d in directions:
-            startrow=r
-            startcol=c
-            while startrow>=0 and startrow<=7 and startcol>=0 and startcol<=7:
-                startrow+=d[0]
-                startcol+=d[1]
-                if startrow>=0 and startrow<=7 and startcol>=0 and startcol<=7:
-                    if self.board[startrow][startcol][0]==enemy:
-                        move.append(moving((r,c),(startrow,startcol),self.board)) 
-                        break
-                    elif self.board[startrow][startcol][0]=='?':
-                        move.append(moving((r,c),(startrow,startcol),self.board))
-                    else: break
+        #SINCE THE QUEEN IS BISHOP AND ROOK
+        self.getbishopmoves(r,c,move)
+        self.getrockmoves(r,c,move)
          
     def getknightmoves(self,r,c,move):
         directions=[(1,2),(1,-2),(2,1),(2,-1),(-2,1),(-2,-1),(-1,2),(-1,-2)]
