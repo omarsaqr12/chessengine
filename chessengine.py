@@ -361,7 +361,7 @@ class moving():
         self.piecemovec=board[self.startrow][self.startcol]
         self.picecaptured=board[self.endrow][self.endcol]
         self.moveid=1000*self.startrow+100*self.startcol+10*self.endrow+self.endcol
-        print(self.getnotation())
+        # print(self.getnotation())
     def __eq__(self, object):
         if(isinstance(object,moving)):
             return object.moveid==self.moveid

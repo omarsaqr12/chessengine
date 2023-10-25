@@ -55,10 +55,25 @@ def main():
             validmove=game.validmoves()
             calculate=False            
         clock.tick(15)
-        drawboard(game.board,screen)
+        drawboard(game.board,screen,game,validmove,seqsq)
         p.display.flip() #Update the full display Surface to the screen, this is why this is put inside a while loop
+def highlight(game, screen,validmoves,seqsq):
+    if seqsq!=():
+        r,c=seqsq
+        r=int(r)
+        c=int(c)
+        if game.board[r][c][0]==('w' if game.whitetomove else 'b'):
+            s=p.Surface((squaredimention,squaredimention))
+            s.set_alpha(100)
+            s.fill(p.Color('black'))
+            screen.blit(s,(c*squaredimention,r*squaredimention))
+            s.fill(p.Color('blue'))
+            for move in validmoves:
+                if move.startrow==r and move.startcol==c:
+                    screen.blit(s,(squaredimention*move.endcol,squaredimention*move.endrow))
+
         
-def drawboard(board,screen):
+def drawboard(board,screen,game,validmoves,seqsq):
     colro=[p.Color("green"), p.Color("red")]
     for r in range(dimension):
         for c in range(dimension):
@@ -66,4 +81,5 @@ def drawboard(board,screen):
             piece=board[r][c]
             if(piece!="??"):
                 screen.blit(Image[piece], p.Rect(c*squaredimention,r*squaredimention,squaredimention,squaredimention))
+    highlight(game,screen,validmoves,seqsq)
 main()
