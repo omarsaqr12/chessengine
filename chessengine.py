@@ -222,6 +222,17 @@ class gameState():
 
                   
     def getrockmoves(self,r,c,move):
+        piece_pinned = False
+        pin_direction = ()
+        for i in range(len(self.pins) - 1, -1, -1):
+            if self.pins[i][0] == r and self.pins[i][1] == c:
+                piece_pinned = True
+                pin_direction = (self.pins[i][2], self.pins[i][3])
+                if self.board[r][c][
+                    1] != "q":  # can't remove queen from pin on rook moves, only remove it on bishop moves
+                    self.pins.remove(self.pins[i])
+                break
+
         directions=[(1,0),(0,1),(-1,0),(0,-1)]
         enemy='b' if (self.whitetomove and self.board[r][c][0]=='w') else 'w'
         for d in directions:
@@ -231,12 +242,16 @@ class gameState():
                 startrow+=d[0]
                 startcol+=d[1]
                 if startrow>=0 and startrow<=7 and startcol>=0 and startcol<=7:
-                    if self.board[startrow][startcol][0]==enemy:
+                    if self.board[startrow][startcol][0]==enemy and(not piece_pinned or pin_direction == d or pin_direction == (
+                            -d[0], -d[1])):
                         move.append(moving((r,c),(startrow,startcol),self.board)) 
                         break
-                    elif self.board[startrow][startcol][0]=='?':
+                    elif self.board[startrow][startcol][0]=='?' and (not piece_pinned or pin_direction == d or pin_direction == (
+                            -d[0], -d[1])):
                         move.append(moving((r,c),(startrow,startcol),self.board))
                     else: break
+                else:
+                    break
 
             
     def getbishopmoves(self,r,c,move):
