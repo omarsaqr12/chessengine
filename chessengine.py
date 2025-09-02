@@ -21,6 +21,9 @@ class gameState():
         self.enpassant_possible = ()
         self.current_castling_rights = CastleRights(True, True, True, True)
         self.castle_rights_log = [CastleRights(True, True, True, True)]
+        self.halfmove_clock = 0
+        self.draw_by_fifty = False
+        self.draw_by_threefold = False
 
         # correct chess initial setup
         self.board = [
@@ -36,7 +39,7 @@ class gameState():
 
         self.funcmove = {
             'p': self.getPawnMoves,
-            'r': self.getrockmoves,
+            'r': self.getrookmoves,
             'q': self.getqueenmoves,
             'k': self.getkingmoves,
             'b': self.getbishopmoves,
@@ -52,6 +55,7 @@ class gameState():
             self.current_castling_rights.bks,
             self.current_castling_rights.bqs,
         )
+        movin.prev_halfmove_clock = self.halfmove_clock
 
         self.board[movin.startrow][movin.startcol] = "??"
         self.board[movin.endrow][movin.endcol] = movin.piecemovec
@@ -105,6 +109,11 @@ class gameState():
             self.current_castling_rights.bks,
             self.current_castling_rights.bqs,
         ))
+        # update halfmove clock (50-move rule)
+        if movin.piecemovec[1] == 'p' or movin.picecaptured != '??' or getattr(movin, 'is_enpassant', False):
+            self.halfmove_clock = 0
+        else:
+            self.halfmove_clock += 1
         self.whitetomove = not self.whitetomove
 
     def undo_move(self):
@@ -142,6 +151,7 @@ class gameState():
             # restore special-state
             self.enpassant_possible = getattr(movin, 'prev_enpassant', ())
             self.current_castling_rights = getattr(movin, 'prev_castle_rights', CastleRights(True, True, True, True))
+            self.halfmove_clock = getattr(movin, 'prev_halfmove_clock', 0)
             if len(self.castle_rights_log) > 0:
                 self.castle_rights_log.pop()
             self.whitetomove = not self.whitetomove
@@ -399,7 +409,7 @@ class gameState():
                         m.picecaptured = 'wp'
                         move.append(m)
 
-    def getrockmoves(self, r, c, move):
+    def getrookmoves(self, r, c, move):
         piece_pinned = False
         pin_direction = ()
         for i in range(len(self.pins) - 1, -1, -1):
@@ -428,6 +438,10 @@ class gameState():
                         break
                 else:
                     break
+
+    # Backward compatibility alias
+    def getrockmoves(self, r, c, move):
+        return self.getrookmoves(r, c, move)
 
     def getbishopmoves(self, r, c, move):
         piece_pinned = False
@@ -581,7 +595,7 @@ class gameState():
     def getqueenmoves(self, r, c, move):
         # SINCE THE QUEEN IS BISHOP AND ROOK
         self.getbishopmoves(r, c, move)
-        self.getrockmoves(r, c, move)
+        self.getrookmoves(r, c, move)
 
     def getknightmoves(self, r, c, move):
         directions = [(1, 2), (1, -2), (2, 1), (2, -1), (-2, 1), (-2, -1), (-1, 2), (-1, -2)]
