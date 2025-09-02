@@ -3,14 +3,14 @@ import pygame as p
 import chessengine
 width=height=400
 dimension=8
-squaredimention=height/dimension #this is why we chose a height and width divsible by 8
+squaredimention=height//dimension #this is why we chose a height and width divsible by 8
 Image={}
 fps=15
 #then we will make our main funciton
 def loadimage():
     pieces=["wr","wb","wn","wq","wk","wp","bp","br","bb","bn","bq","bk"]
     for piece in pieces:
-        Image[piece]=p.transform.scale(p.image.load("images/"+piece+".png"),(squaredimention,squaredimention))# trasnform.scale to resize to a new resolution
+        Image[piece]=p.transform.scale(p.image.load("images/"+piece+".png"),(int(squaredimention),int(squaredimention)))# trasnform.scale to resize to a new resolution
             
 # now we will create the main function which will be used to handle the user input and draw the board and the pieces
 def main():
