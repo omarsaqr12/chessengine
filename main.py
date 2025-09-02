@@ -1,9 +1,10 @@
-#this file will be used to take the input from the user, his moves.
 import pygame as p
+from pathlib import Path
 import chessengine
+
 width=height=400
 dimension=8
-squaredimention=height//dimension #this is why we chose a height and width divsible by 8
+squaredimention=height//dimension
 bar_width=60
 AI_ENABLED=True
 AI_PLAYS_WHITE=False
@@ -11,18 +12,21 @@ AI_DEPTH=5
 EVAL_DEPTH=5
 Image={}
 fps=15
-#then we will make our main funciton
+
+_BASE_DIR = Path(__file__).resolve().parent
+_IMAGES_DIR = _BASE_DIR / "images"
+
 def loadimage():
     pieces=["wr","wb","wn","wq","wk","wp","bp","br","bb","bn","bq","bk"]
     for piece in pieces:
-        Image[piece]=p.transform.scale(p.image.load("images/"+piece+".png"),(int(squaredimention),int(squaredimention)))# trasnform.scale to resize to a new resolution
-            
-# now we will create the main function which will be used to handle the user input and draw the board and the pieces
+        img_path=_IMAGES_DIR/(piece+".png")
+        Image[piece]=p.transform.scale(p.image.load(str(img_path)),(int(squaredimention),int(squaredimention)))
+
 def main():
     p.init()
     loadimage()
-    screen=p.display.set_mode((width+bar_width,height))#Initialize a window or screen for display
-    clock=p.time.Clock() #create an object to help track time
+    screen=p.display.set_mode((width+bar_width,height))
+    clock=p.time.Clock()
     running =True
     seqsq=()
     movi=[]
@@ -46,7 +50,6 @@ def main():
                         seqsq=(x,y)
                         movi.append(seqsq)
                     if len(movi)==2:
-                        # use engine-generated move object to preserve special move flags
                         start=movi[0]; end=movi[1]
                         move_to_play=None
                         for mv in validmove:
@@ -66,7 +69,6 @@ def main():
                     calculate=True
         if(calculate):
             validmove=game.validmoves()
-            # AI move if enabled
             if AI_ENABLED and game.whitetomove==AI_PLAYS_WHITE and len(validmove)>0:
                 ai_move,_=game.find_best_move(depth=AI_DEPTH)
                 if ai_move is not None:
@@ -76,7 +78,8 @@ def main():
             calculate=False            
         clock.tick(15)
         drawboard(game.board,screen,game,validmove,seqsq,current_eval)
-        p.display.flip() #Update the full display Surface to the screen, this is why this is put inside a while loop
+        p.display.flip()
+
 def highlight(game, screen,validmoves,seqsq):
     if seqsq!=():
         r,c=seqsq
@@ -92,7 +95,6 @@ def highlight(game, screen,validmoves,seqsq):
                 if move.startrow==r and move.startcol==c:
                     screen.blit(s,(squaredimention*move.endcol,squaredimention*move.endrow))
 
-        
 def drawboard(board,screen,game,validmoves,seqsq,current_eval):
     colro=[p.Color("green"), p.Color("red")]
     for r in range(dimension):
@@ -105,16 +107,12 @@ def drawboard(board,screen,game,validmoves,seqsq,current_eval):
     draw_eval_bar(screen,current_eval)
 
 def draw_eval_bar(screen,current_eval):
-    # current_eval is white-centric centipawns from minimax
     max_cp=1000
     cp=int(max(-max_cp,min(max_cp,current_eval)))
     white_height=(cp+max_cp)*height//(2*max_cp)
-    # background
     p.draw.rect(screen,p.Color('white'),p.Rect(width,0,bar_width,white_height))
     p.draw.rect(screen,p.Color('black'),p.Rect(width,white_height,bar_width,height))
-    # border
     p.draw.rect(screen,p.Color('gray'),p.Rect(width,0,bar_width,height),1)
-    # text
     try:
         font=p.font.SysFont(None,16)
         txt=("+" if current_eval>=0 else "")+str(round(current_eval/100.0,2))
@@ -122,4 +120,8 @@ def draw_eval_bar(screen,current_eval):
         screen.blit(text_surf,(width+5,5))
     except Exception:
         pass
-main()
+
+if __name__=="__main__":
+    main()
+
+
