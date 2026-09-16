@@ -1,127 +1,124 @@
-import pygame as p
+"""Pygame chess board and computer opponent."""
+
 from pathlib import Path
-import chessengine
 
-width=height=400
-dimension=8
-squaredimention=height//dimension
-bar_width=60
-AI_ENABLED=True
-AI_PLAYS_WHITE=False
-AI_DEPTH=5
-EVAL_DEPTH=5
-Image={}
-fps=15
+import pygame as p
+from verified_engine import GameState
 
-_BASE_DIR = Path(__file__).resolve().parent
-_IMAGES_DIR = _BASE_DIR / "images"
+BOARD_SIZE = 400
+SQUARE = BOARD_SIZE // 8
+BAR_WIDTH = 70
+AI_ENABLED = True
+AI_PLAYS_WHITE = False
+AI_DEPTH = 2
+EVAL_DEPTH = 1
+ASSETS = Path(__file__).resolve().parent / 'images'
 
-def loadimage():
-    pieces=["wr","wb","wn","wq","wk","wp","bp","br","bb","bn","bq","bk"]
-    for piece in pieces:
-        img_path=_IMAGES_DIR/(piece+".png")
-        Image[piece]=p.transform.scale(p.image.load(str(img_path)),(int(squaredimention),int(squaredimention)))
+
+def load_images():
+    return {color + kind: p.transform.scale(
+        p.image.load(str(ASSETS / (color + kind + '.png'))), (SQUARE, SQUARE))
+        for color in 'wb' for kind in 'rnbqkp'}
+
+
+def select_move(moves, start, end):
+    return next((m for m in moves
+                 if (m.startrow, m.startcol) == start
+                 and (m.endrow, m.endcol) == end), None)
+
+
+def draw_board(screen, state, moves, selected, images, evaluation):
+    for r in range(8):
+        for c in range(8):
+            rect = p.Rect(c * SQUARE, r * SQUARE, SQUARE, SQUARE)
+            p.draw.rect(screen, (235, 236, 208) if (r + c) % 2 == 0
+                        else (119, 149, 86), rect)
+            piece = state.board[r][c]
+            if piece != '??':
+                screen.blit(images[piece], rect)
+    if selected is not None:
+        r, c = selected
+        if state.board[r][c][0] == ('w' if state.whitetomove else 'b'):
+            overlay = p.Surface((SQUARE, SQUARE), p.SRCALPHA)
+            overlay.fill((60, 90, 220, 85))
+            screen.blit(overlay, (c * SQUARE, r * SQUARE))
+            overlay.fill((50, 150, 80, 95))
+            for move in moves:
+                if (move.startrow, move.startcol) == selected:
+                    screen.blit(overlay, (move.endcol * SQUARE, move.endrow * SQUARE))
+    value = int(max(-1000, min(1000, evaluation)))
+    white_height = (value + 1000) * BOARD_SIZE // 2000
+    p.draw.rect(screen, (245, 245, 245), (BOARD_SIZE, 0, BAR_WIDTH, white_height))
+    p.draw.rect(screen, (25, 25, 25),
+                (BOARD_SIZE, white_height, BAR_WIDTH, BOARD_SIZE - white_height))
+    p.draw.rect(screen, (110, 110, 110), (BOARD_SIZE, 0, BAR_WIDTH, BOARD_SIZE), 1)
+    font = p.font.SysFont(None, 19)
+    if state.check_mate:
+        text = 'Mate'
+    elif state.stale_mate:
+        text = 'Draw'
+    else:
+        text = f'{evaluation / 100:+.1f}'
+    screen.blit(font.render(text, True, (60, 100, 210)), (BOARD_SIZE + 5, 6))
+
 
 def main():
     p.init()
-    loadimage()
-    screen=p.display.set_mode((width+bar_width,height))
-    clock=p.time.Clock()
-    running =True
-    seqsq=()
-    movi=[]
-    game=chessengine.gameState()
-    validmove=game.validmoves()
-    calculate=False
-    current_eval=game.evaluate_minimax(depth=EVAL_DEPTH)
+    screen = p.display.set_mode((BOARD_SIZE + BAR_WIDTH, BOARD_SIZE))
+    p.display.set_caption('Chess engine')
+    clock = p.time.Clock()
+    images = load_images()
+    state = GameState()
+    moves = state.validmoves()
+    selected = None
+    evaluation = state.evaluate()
+    changed = AI_ENABLED and AI_PLAYS_WHITE
+    running = True
     while running:
-        for e in p.event.get():
-            if e.type==p.QUIT:
-                running=False
-            elif e.type==p.MOUSEBUTTONDOWN:
-                location=p.mouse.get_pos()
-                y=location[0]//squaredimention
-                x=location[1]//squaredimention
-                if x<dimension and y<dimension:
-                    if seqsq==(x,y):
-                        seqsq=()
-                        movi=[]
-                    else:
-                        seqsq=(x,y)
-                        movi.append(seqsq)
-                    if len(movi)==2:
-                        start=movi[0]; end=movi[1]
-                        move_to_play=None
-                        for mv in validmove:
-                            if mv.startrow==start[0] and mv.startcol==start[1] and mv.endrow==end[0] and mv.endcol==end[1]:
-                                move_to_play=mv
-                                break
-                        if move_to_play is not None:
-                            game.makemove(move_to_play)
-                            calculate=True
-                            seqsq=()
-                            movi=[]
-                        else:
-                            movi=[seqsq]
-            elif e.type ==p.KEYDOWN:
-                if e.key==p.K_z:
-                    game.undo_move()
-                    calculate=True
-        if(calculate):
-            validmove=game.validmoves()
-            if AI_ENABLED and game.whitetomove==AI_PLAYS_WHITE and len(validmove)>0:
-                ai_move,_=game.find_best_move(depth=AI_DEPTH)
+        for event in p.event.get():
+            if event.type == p.QUIT:
+                running = False
+            elif event.type == p.KEYDOWN and event.key == p.K_z:
+                if AI_ENABLED and len(state.movelog) >= 2:
+                    state.undo_move()
+                    state.undo_move()
+                    changed = True
+                elif not AI_ENABLED and state.movelog:
+                    state.undo_move()
+                    changed = True
+                selected = None
+            elif event.type == p.MOUSEBUTTONDOWN and event.button == 1:
+                if AI_ENABLED and state.whitetomove == AI_PLAYS_WHITE:
+                    continue
+                x, y = event.pos
+                if not (0 <= x < BOARD_SIZE and 0 <= y < BOARD_SIZE):
+                    continue
+                square = (y // SQUARE, x // SQUARE)
+                if square == selected:
+                    selected = None
+                    continue
+                if selected is not None:
+                    move = select_move(moves, selected, square)
+                    if move is not None:
+                        state.makemove(move)
+                        changed = True
+                        selected = None
+                        continue
+                selected = square
+        if changed:
+            moves = state.validmoves()
+            if AI_ENABLED and state.whitetomove == AI_PLAYS_WHITE and moves:
+                ai_move, _ = state.find_best_move(AI_DEPTH)
                 if ai_move is not None:
-                    game.makemove(ai_move)
-                    validmove=game.validmoves()
-            current_eval=game.evaluate_minimax(depth=EVAL_DEPTH)
-            calculate=False            
-        clock.tick(15)
-        drawboard(game.board,screen,game,validmove,seqsq,current_eval)
+                    state.makemove(ai_move)
+                    moves = state.validmoves()
+            evaluation = state.evaluate_minimax(EVAL_DEPTH)
+            changed = False
+        draw_board(screen, state, moves, selected, images, evaluation)
         p.display.flip()
+        clock.tick(30)
+    p.quit()
 
-def highlight(game, screen,validmoves,seqsq):
-    if seqsq!=():
-        r,c=seqsq
-        r=int(r)
-        c=int(c)
-        if game.board[r][c][0]==('w' if game.whitetomove else 'b'):
-            s=p.Surface((squaredimention,squaredimention))
-            s.set_alpha(100)
-            s.fill(p.Color('black'))
-            screen.blit(s,(c*squaredimention,r*squaredimention))
-            s.fill(p.Color('blue'))
-            for move in validmoves:
-                if move.startrow==r and move.startcol==c:
-                    screen.blit(s,(squaredimention*move.endcol,squaredimention*move.endrow))
 
-def drawboard(board,screen,game,validmoves,seqsq,current_eval):
-    colro=[p.Color("green"), p.Color("red")]
-    for r in range(dimension):
-        for c in range(dimension):
-            p.draw.rect(screen,colro[(r+c)%2],p.Rect(c*squaredimention,r*squaredimention,squaredimention,squaredimention))
-            piece=board[r][c]
-            if(piece!="??"):
-                screen.blit(Image[piece], p.Rect(c*squaredimention,r*squaredimention,squaredimention,squaredimention))
-    highlight(game,screen,validmoves,seqsq)
-    draw_eval_bar(screen,current_eval)
-
-def draw_eval_bar(screen,current_eval):
-    max_cp=1000
-    cp=int(max(-max_cp,min(max_cp,current_eval)))
-    white_height=(cp+max_cp)*height//(2*max_cp)
-    p.draw.rect(screen,p.Color('white'),p.Rect(width,0,bar_width,white_height))
-    p.draw.rect(screen,p.Color('black'),p.Rect(width,white_height,bar_width,height))
-    p.draw.rect(screen,p.Color('gray'),p.Rect(width,0,bar_width,height),1)
-    try:
-        font=p.font.SysFont(None,16)
-        txt=("+" if current_eval>=0 else "")+str(round(current_eval/100.0,2))
-        text_surf=font.render(txt,True,p.Color('blue'))
-        screen.blit(text_surf,(width+5,5))
-    except Exception:
-        pass
-
-if __name__=="__main__":
+if __name__ == '__main__':
     main()
-
-
